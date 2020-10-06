@@ -25,15 +25,15 @@ template](https://github.com/datalad/datalad-extension-template/generate), and
 adjust as necessary. A good approach is to
 
 - Pick a name for the new extension.
-- Look through the sources and replace `datalad_helloworld` with
-  `datalad_<newname>` (hint: `git grep datalad_helloworld` should find all
+- Look through the sources and replace `datalad_ebrains` with
+  `datalad_<newname>` (hint: `git grep datalad_ebrains` should find all
   spots).
-- Delete the example command implementation in `datalad_helloworld/__init__.py`
+- Delete the example command implementation in `datalad_ebrains/__init__.py`
   by (re)moving the `HelloWorld` class.
 - Implement a new command, and adjust the `command_suite` in
-  `datalad_helloworld/__init__.py` to point to it.
+  `datalad_ebrains/__init__.py` to point to it.
 - Replace `hello_cmd` with the name of the new command in
-  `datalad_helloworld/tests/test_register.py` to automatically test whether the
+  `datalad_ebrains/tests/test_register.py` to automatically test whether the
   new extension installs correctly.
 - Adjust the documentation in `docs/source/index.rst`.
 - Replace this README.

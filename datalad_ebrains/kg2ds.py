@@ -1,7 +1,3 @@
-"""DataLad demo extension"""
-
-__docformat__ = 'restructuredtext'
-
 from os.path import curdir
 from os.path import abspath
 
@@ -14,35 +10,14 @@ from datalad.support.constraints import EnsureChoice
 
 from datalad.interface.results import get_status_dict
 
-# defines a datalad command suite
-# this symbold must be indentified as a setuptools entrypoint
-# to be found by datalad
-command_suite = (
-    # description of the command suite, displayed in cmdline help
-    "Demo DataLad command suite",
-    [
-        # specification of a command, any number of commands can be defined
-        (
-            # importable module that contains the command implementation
-            'datalad_helloworld',
-            # name of the command class implementation in above module
-            'HelloWorld',
-            # optional name of the command in the cmdline API
-            'hello-cmd',
-            # optional name of the command in the Python API
-            'hello_cmd'
-        ),
-    ]
-)
-
 
 # decoration auto-generates standard help
 @build_doc
 # all commands must be derived from Interface
-class HelloWorld(Interface):
+class KnowledgeGraph2Dataset(Interface):
     # first docstring line is used a short description in the cmdline help
     # the rest is put in the verbose help and manpage
-    """Short description of the command
+    """Export any dataset from the EBRAINS Knowledge Graph as a DataLad dataset
 
     Long description of arbitrary volume.
     """
@@ -62,7 +37,7 @@ class HelloWorld(Interface):
 
     @staticmethod
     # decorator binds the command to the Dataset class as a method
-    @datasetmethod(name='hello')
+    @datasetmethod(name='ebrains_kg2ds')
     # generic handling of command results (logging, rendering, filtering, ...)
     @eval_results
     # signature must match parameter list above
@@ -91,11 +66,3 @@ class HelloWorld(Interface):
             # case string expansion with arguments is delayed until the
             # message actually needs to be rendered (analog to exception messages)
             message=msg)
-
-
-from datalad import setup_package
-from datalad import teardown_package
-
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
