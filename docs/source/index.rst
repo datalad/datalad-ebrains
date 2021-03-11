@@ -1,9 +1,5 @@
-DataLad extension template
-**************************
-
-This is a template for creating a `DataLad <http://datalad.org>`__ extension
-that equips DataLad with additional functionality.
-
+DataLad EBRAINS extension
+*************************
 
 API
 ===
@@ -15,7 +11,7 @@ High-level API commands
 .. autosummary::
    :toctree: generated
 
-   hello_cmd
+   ebrains_kg2ds
 
 
 Command line reference
@@ -24,7 +20,7 @@ Command line reference
 .. toctree::
    :maxdepth: 1
 
-   generated/man/datalad-hello-cmd
+   generated/man/datalad-ebrains-kg2ds
 
 
 Indices and tables
