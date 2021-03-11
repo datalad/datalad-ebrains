@@ -1,4 +1,5 @@
-from tempfile import NamedTemporaryFile
+import logging
+from collections import OrderedDict
 
 from datalad.distribution.dataset import datasetmethod
 from datalad.interface.base import (
@@ -16,10 +17,15 @@ from datalad.distribution.dataset import (
     EnsureDataset,
     require_dataset,
 )
-from datalad.support.json_py import (
-    jsondump,
-    jsonload,
+from datalad_ebrains.kg_query import (
+    KGQueryException,
+    get_annex_key_records,
+    get_token,
+    get_kgds_parent_id,
+    query_kg4dataset,
 )
+
+lgr = logging.getLogger('datalad.ebrains.kg2ds')
 
 
 class EnsureUUID(Constraint):
@@ -38,9 +44,19 @@ class EnsureUUID(Constraint):
 
 @build_doc
 class KnowledgeGraph2Dataset(Interface):
-    """Export any dataset from the EBRAINS Knowledge Graph as a DataLad dataset
+    """Export any dataset from the EBRAINS Knowledge Graph (KG) as a dataset
 
-    some
+    *Obtain authorization for performing KG queries*
+
+    These instructions reflect the current (development) setup. Eventually,
+    KG queries as needed here should become accessible without dedicated
+    authorization.
+
+    1. Register and request authorization https://kg.ebrains.eu/develop.html
+    2. Get an authentication token from
+       https://nexus-iam.humanbrainproject.org/v0/oauth2/authorize
+       This token is only valid for a short period of time (<24h?).
+    3. Define EBRAINS_TOKEN environment variable with the token.
     """
 
     _params_ = dict(
@@ -49,9 +65,8 @@ class KnowledgeGraph2Dataset(Interface):
             metavar='KGID',
             doc="""ID of a dataset in the knowledge graph. This is a UUID
             that is the trailing part of the URL when looking at a dataset
-            at http://kg,ebrains.eu""",
-            ),
-            #constraints=EnsureUUID()),
+            at http://kg.ebrains.eu""",
+            constraints=EnsureUUID()),
         dataset=Parameter(
             args=("-d", "--dataset"),
             doc=""""Dataset to create""",
@@ -63,73 +78,89 @@ class KnowledgeGraph2Dataset(Interface):
     @datasetmethod(name='ebrains_kg2ds')
     @eval_results
     def __call__(kgid, dataset=None):
+        ds = require_dataset(
+            dataset, check_installed=True,
+            purpose='exporting EBRAINS knowledge graph dataset')
 
-        # TODO later we will perform an actual query here, but for now load
-        # a prefetched and stored response from a file
-        response = jsonload(open(kgid))
-        results = response.get('results', [])
-        if not results:
+        res_kwargs = dict(
+            logger=lgr,
+            action='kg2ds',
+            ds=ds,
+        )
+
+        auth_token = get_token()
+
+        revisions = OrderedDict()
+        # TODO query for multiple revisions should be optional
+        while kgid is not None:
+            try:
+                qres = query_kg4dataset(auth_token, kgid)
+            except KGQueryException as e:
+                yield get_status_dict(
+                    status='error',
+                    message=(
+                        'knowlegde graph query %s (query ID: %s)',
+                        str(e), kgid
+                    ),
+                    **res_kwargs
+                )
+                return
+            revisions[kgid] = qres
+            lgr.info("Found revision %s", kgid)
+            # look for a parent revision
+            kgid = get_kgds_parent_id(qres)
+            if kgid in revisions:
+                lgr.warn("Circular revisions detected, stopping query")
+                kgid = None
+            # TODO query for multiple revisions should be optional
+            break
+
+        if not revisions:
             yield get_status_dict(
-                action='kg2ds',
-                status='impossible',
-                message=('knowledge graph query for dataset ID %s yielded no records',
-                         kgid),
-            )
-            return
-        if len(results) > 1:
-            yield get_status_dict(
-                action='kg2ds',
                 status='error',
-                message='knowledge graph query yielded more than one result record',
-            )
-            return
-        file_specs = results[0].get('https://schema.hbp.eu/myQuery/v1.0.0', [])
-        if not results:
-            yield get_status_dict(
-                action='kg2ds',
-                status='impossible',
-                message=('knowledge graph query for dataset ID %s yielded no files',
-                         kgid),
-            )
+                message='No revision to build a dataset from',
+                **res_kwargs)
             return
 
-        # construct a file list (with metadata) suitable for addurls
-        file_list = []
-        for spec in file_specs:
-            url_spec = {}
-            for s, d in (('https://schema.hbp.eu/myQuery/relativeUrl', 'kg_id'),
-                         ('https://schema.hbp.eu/myQuery/last_modified', 'last_modified'),
-                         ('https://schema.hbp.eu/myQuery/absolute_path', 'url'),
-                         ('https://schema.hbp.eu/myQuery/relative_path', 'path')):
-                if s in spec:
-                    url_spec[d] = spec[s]
-            if url_spec:
-                file_list.append(url_spec)
-            else:
-                pass
-                # TODO log skipped item
+        # XXX dump query for dev purposes for now
+        from pprint import pprint
+        pprint(revisions)
 
-        # TODO URLs cannot be accessed as such, but need prior authorization
-        # figure out how that must be done
-        with NamedTemporaryFile('w') as tmp_listfile:
-            jsondump(file_list, tmp_listfile)
-            tmp_listfile.seek(0)
-            from datalad.api import addurls
-            addurls(
-                dataset=dataset or '',
-                urlfile=tmp_listfile.name,
-                urlformat='{url}',
-                filenameformat='{path}',
-                input_type='json',
-                # TODO
-                fast=True,
-            )
+        # only a single revision for now
+        kgdsid, kgdsrec = revisions.popitem()
 
-        # TODO? adjust timestamps to the last modification
+        ds.addurls(
+            # Turn query into an iterable of dicts for addurls
+            urlfile=get_annex_key_records(kgdsrec),
+            urlformat='{url}',
+            filenameformat='{name}',
+            # construct annex key from EBRAINS supplied info
+            key='et:MD5-s{size}--{md5sum}',
+            # we have a better idea than "auto"
+            exclude_autometa='*',
+            # and here it is
+            meta=(
+                'content_type={content_type}',
+                'ebrains_last_modified={last_modified}',
+                'ebrain_last_modification_userid={last_modifier}',
+            ),
+            fast=True,
+            save=False,
+        )
+        # TODO?
+        # - adjust timestamps to the last modification
+        # - adjust author info to EBRAINS user (in contrast to committer)
+        # - auto-build README
 
-        yield None
-        #yield get_status_dict(
-        #    action='kg2ds',
-        #    path=abspath(curdir),
-        #    status='ok')
+        yield from ds.save(
+            # make parameter?
+            # we could face a dataset that is scattered across various
+            # subdatasets
+            recursive=True,
+            # TODO make pretty
+            message=kgdsid,
+        )
 
+        yield get_status_dict(
+            status='ok',
+            **res_kwargs)
