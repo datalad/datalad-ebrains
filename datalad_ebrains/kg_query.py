@@ -4,6 +4,7 @@ import requests
 import json
 
 from datalad.downloaders.credentials import Token
+from datalad import ui
 
 lgr = logging.getLogger('datalad.ebrains.kg_query')
 
