@@ -39,6 +39,6 @@ http://neurostars.org/tags/datalad/
 ## Acknowledgements
 
 This development was supported by European Union’s Horizon 2020 research and
-innovation programme under grant agreement [VirtualBrainCloud
+innovation programme under grant agreement [Human Brain Project SGA3
 (H2020-EU.3.1.5.3, grant no.
-945539)](https://cordis.europa.eu/project/id/945539) (HBP SGA3).
+945539)](https://cordis.europa.eu/project/id/945539).
