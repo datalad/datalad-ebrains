@@ -1,9 +1,8 @@
 import logging
-from os import environ
 import requests
 import json
 
-from datalad.downloaders.credentials import Token
+from datalad.downloaders.credentials import UserPassword
 from datalad import ui
 
 lgr = logging.getLogger('datalad.ebrains.kg_query')
@@ -76,27 +75,41 @@ def query_kg4dataset(auth_token, dataset_id):
     return qres
 
 
-def get_token(allow_interactive=True):
-    # prefer the environment
-    if 'EBRAINS_TOKEN' in environ:
-        return environ['EBRAINS_TOKEN']
-
-    # fall back on DataLad credential manager
-    token_auth = Token(
-        name='https://kg.humanbrainproject.eu/query',
-        url='https://nexus-iam.humanbrainproject.org/v0/oauth2/authorize',
+def get_token(credential, allow_interactive=True):
+    # we ultimately want a token, but it is only valid for a short amount of
+    # time, and it has to be obtained via user/pass credentials each time
+    user_auth = UserPassword(
+        name=credential,
+        url='https://ebrains.eu/register',
     )
     do_interactive = allow_interactive and ui.is_interactive()
 
-    # get auth token, from environment, or from datalad credential store
-    # if known-- we do not support first-time entry during a test run
-    token = environ.get(
-        'EBRAINS_TOKEN',
-        token_auth().get('token', None)
-        if do_interactive or token_auth.is_known
-        else None)
+    # get auth if known or interactive -- we do not support first-time entry
+    # during a test run
+    userpass = user_auth() if do_interactive or user_auth.is_known else None
+    if not userpass:
+        raise RuntimeError(f'No {credential} credential could be obtained')
 
-    return token
+    # get the token from EBRAINS
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+    }
+    data = json.dumps({
+        'username': userpass['user'],
+        'password': userpass['password'],
+    })
+    response = requests.post(
+        'https://data-proxy.ebrains.eu/api/auth/token',
+        headers=headers,
+        data=data
+    )
+    if response.status_code == 200:
+        return response.json()
+
+    raise RuntimeError(
+        f"Failed to obtain EBRAINS token [HTTP {response.status_code}]: "
+        f"{response.text}")
 
 
 class KGQueryException(RuntimeError):

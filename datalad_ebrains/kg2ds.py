@@ -12,6 +12,7 @@ from datalad.support.param import Parameter
 from datalad.support.constraints import (
     Constraint,
     EnsureNone,
+    EnsureStr,
 )
 from datalad.distribution.dataset import (
     EnsureDataset,
@@ -72,12 +73,23 @@ class KnowledgeGraph2Dataset(Interface):
             doc=""""Dataset to create""",
             constraints=EnsureDataset() | EnsureNone()
         ),
+        credential=Parameter(
+            args=('--credential',),
+            constraints=EnsureStr() | EnsureNone(),
+            metavar='NAME',
+            doc="""name of the credential providing the EBRAINS username
+            and password. Username and password can be supplied via
+            configuration setting 'datalad.credential.<name>.{user|password}',
+            or environment variables DATALAD_CREDENTIAL_<NAME>_{USER|PASSWORD},
+            or will be queried from the active credential store using the
+            provided name. If none is provided, the default name 'ebrains'
+            will be used."""),
     )
 
     @staticmethod
     @datasetmethod(name='ebrains_kg2ds')
     @eval_results
-    def __call__(kgid, dataset=None):
+    def __call__(kgid, *, dataset=None, credential='ebrains'):
         ds = require_dataset(
             dataset, check_installed=True,
             purpose='exporting EBRAINS knowledge graph dataset')
@@ -88,7 +100,7 @@ class KnowledgeGraph2Dataset(Interface):
             ds=ds,
         )
 
-        auth_token = get_token()
+        auth_token = get_token(credential)
 
         revisions = OrderedDict()
         # TODO query for multiple revisions should be optional
