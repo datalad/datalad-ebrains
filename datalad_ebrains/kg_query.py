@@ -20,7 +20,7 @@ type_key = 'https://schema.hbp.eu/myQuery/@type'
 
 
 def get_auth_headers(token):
-    """Get token-based auth headers for a KG HTPP request
+    """Get token-based auth headers for a KG HTTP request
 
     Parameters
     ----------
@@ -57,6 +57,7 @@ def query_kg4dataset(auth_token, dataset_id):
         kg_dataset_query,
         dataset_id,
     )
+    lgr.debug('GET request for %s', url)
     # perform the request
     r = requests.get(
         url,
