@@ -22,7 +22,6 @@ from datalad_ebrains.kg_query import (
     KGQueryException,
     get_annex_key_records,
     get_token,
-    get_kgds_parent_id,
     query_kg4dataset,
 )
 
@@ -118,14 +117,16 @@ class KnowledgeGraph2Dataset(Interface):
                 )
                 return
             revisions[kgid] = qres
-            lgr.info("Found revision %s", kgid)
-            # look for a parent revision
-            kgid = get_kgds_parent_id(qres)
-            if kgid in revisions:
-                lgr.warn("Circular revisions detected, stopping query")
-                kgid = None
-            # TODO query for multiple revisions should be optional
-            break
+            # TODO no multi-revision support for now
+            kgid = None
+            #lgr.info("Found revision %s", kgid)
+            ## look for a parent revision
+            #kgid = get_kgds_parent_id(qres)
+            #if kgid in revisions:
+            #    lgr.warn("Circular revisions detected, stopping query")
+            #    kgid = None
+            ## TODO query for multiple revisions should be optional
+            #break
 
         if not revisions:
             yield get_status_dict(
@@ -135,44 +136,90 @@ class KnowledgeGraph2Dataset(Interface):
             return
 
         # XXX dump query for dev purposes for now
-        from pprint import pprint
-        pprint(revisions)
+        #from pprint import pprint
+        #pprint(revisions)
 
         # only a single revision for now
         kgdsid, kgdsrec = revisions.popitem()
 
-        ds.addurls(
-            # Turn query into an iterable of dicts for addurls
-            urlfile=get_annex_key_records(kgdsrec),
-            urlformat='{url}',
-            filenameformat='{name}',
-            # construct annex key from EBRAINS supplied info
-            key='et:MD5-s{size}--{md5sum}',
-            # we have a better idea than "auto"
-            exclude_autometa='*',
-            # and here it is
-            meta=(
-                'content_type={content_type}',
-                'ebrains_last_modified={last_modified}',
-                'ebrain_last_modification_userid={last_modifier}',
-            ),
-            fast=True,
-            save=False,
-        )
-        # TODO?
-        # - adjust timestamps to the last modification
-        # - adjust author info to EBRAINS user (in contrast to committer)
-        # - auto-build README
-
-        yield from ds.save(
-            # make parameter?
-            # we could face a dataset that is scattered across various
-            # subdatasets
-            recursive=True,
-            # TODO make pretty
-            message=kgdsid,
-        )
+        yield from process_revision(ds, kgdsid, kgdsrec, auth_token)
 
         yield get_status_dict(
             status='ok',
             **res_kwargs)
+
+
+def process_revision(ds, rev_id, rev_record, auth_token):
+    # TODO store general metadata
+    # TODO check rev_record['accessibility']['identifier'] for embargo, etc.
+    filerepo_id = rev_record.get('fileRepository', {}).get('id')
+    if not filerepo_id:
+        yield get_status_dict(
+            status='impossible',
+            ds=ds,
+            message='Found no file repository identifier',
+        )
+        return
+
+    # the challenge is to get a local relative path out of the file
+    # query results.
+    # EBRAINS does not seems to provide a trace of the internal
+    # organization of a dataset outside the IRI URLs.
+    # filerepo IRIs looks like
+    # https://object.cscs.ch/.../filereponame?prefix=.../
+    # this prefix is displayed as the (one?) root directory _within_
+    # the dataset -- I believe it is foreseen to have multiple filerepos
+    # for a single dataset, so these should be relevant to keep.
+    # the file IRIs do contain that prefix too, so we could simply
+    # take the baseurl, excluding the prefix var definition as a base
+    filerepo_baseurl = rev_record.get('fileRepository', {}).get(
+        'iri', '?').split('?', maxsplit=1)[0]
+    if not filerepo_baseurl:
+        yield get_status_dict(
+            status='impossible',
+            ds=ds,
+            message='Found no file repository base URL',
+        )
+        return
+
+    yield from ds.addurls(
+        # Turn query into an iterable of dicts for addurls
+        urlfile=get_annex_key_records(
+            filerepo_id,
+            filerepo_baseurl,
+            auth_token,
+        ),
+        urlformat='{url}',
+        filenameformat='{name}',
+        # construct annex key from EBRAINS supplied info
+        #key='et:MD5-s{size}--{md5sum}',
+        # we have a better idea than "auto"
+        exclude_autometa='*',
+        # and here it is
+        meta=(
+            'content_type={content_type}',
+        #    'ebrains_last_modified={last_modified}',
+        #    'ebrain_last_modification_userid={last_modifier}',
+        ),
+        #fast=True,
+        save=False,
+        result_renderer='disabled',
+        return_type='generator',
+    )
+    # TODO?
+    # - adjust timestamps to the last modification
+    # - adjust author info to EBRAINS user (in contrast to committer)
+    # - auto-build README
+
+    yield from ds.save(
+        # TODO pass paths to save, or refuse to work on dirty dataset
+        # to begin with
+        # make parameter?
+        # we could face a dataset that is scattered across various
+        # subdatasets
+        recursive=True,
+        # TODO make pretty
+        message=rev_id,
+        result_renderer='disabled',
+        return_type='generator',
+    )
