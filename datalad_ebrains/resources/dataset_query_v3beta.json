@@ -63,12 +63,16 @@
       "path": [
         "https://openminds.ebrains.eu/vocab/homepage",
         "https://openminds.ebrains.eu/vocab/URL"
-      ]
+      ],
+      "singleValue": "FIRST"
+    },
+    {
+      "propertyName": "query:supportChannels",
+      "path": "https://openminds.ebrains.eu/vocab/supportChannel"
     },
     {
       "propertyName": "query:keyword",
-      "path": "https://openminds.ebrains.eu/vocab/keyword",
-      "sort": true
+      "path": "https://openminds.ebrains.eu/vocab/keyword"
     },
     {
       "propertyName": "query:version",
@@ -84,11 +88,19 @@
     },
     {
       "propertyName": "query:relatedPublications",
-      "path": [
-        "https://openminds.ebrains.eu/vocab/relatedPublication",
-        "https://openminds.ebrains.eu/vocab/identifier"
-      ],
-      "ensureOrder": true
+      "path": "https://openminds.ebrains.eu/vocab/relatedPublication",
+      "ensureOrder": true,
+      "structure": [
+        {
+          "propertyName": "query:identifier",
+          "path": "https://openminds.ebrains.eu/vocab/identifier",
+          "required":  true
+        },
+        {
+          "propertyName": "query:type",
+          "path": "@type"
+        }
+      ]
     },
     {
       "propertyName": "query:license",
@@ -201,6 +213,20 @@
         {
           "propertyName": "query:label",
           "path": "https://openminds.ebrains.eu/vocab/name"
+        },
+        {
+          "propertyName": "query:file",
+          "path": [
+            {
+              "@id": "https://openminds.ebrains.eu/vocab/dataLocation",
+              "typeFilter": [
+                {
+                  "@id": "https://openminds.ebrains.eu/core/File"
+                }
+              ]
+            },
+            "https://openminds.ebrains.eu/vocab/IRI"
+          ]
         }
       ]
     },
@@ -1347,7 +1373,8 @@
                           "propertyName": "query:fullName",
                           "path": "https://openminds.ebrains.eu/vocab/name"
                         }
-                      ]
+                      ],
+                      "singleValue": "FIRST"
                     },
                     {
                       "propertyName": "query:minValueUnit",
@@ -1361,7 +1388,8 @@
                           "propertyName": "query:fullName",
                           "path": "https://openminds.ebrains.eu/vocab/name"
                         }
-                      ]
+                      ],
+                      "singleValue": "FIRST"
                     }
                   ]
                 },
@@ -1861,6 +1889,10 @@
           "path": "https://openminds.ebrains.eu/vocab/IRI"
         },
         {
+          "propertyName": "query:contentDescription",
+          "path": "https://openminds.ebrains.eu/vocab/contentDescription"
+        },
+        {
           "propertyName": "query:formats",
           "path": [
             "https://openminds.ebrains.eu/vocab/format",
@@ -1895,6 +1927,18 @@
           "propertyName": "query:fullName",
           "path": "https://openminds.ebrains.eu/vocab/name"
         }
+      ]
+    },
+    {
+      "propertyName": "query:contentTypes",
+      "path": [
+        "https://openminds.ebrains.eu/vocab/repository",
+        {
+          "@id": "https://openminds.ebrains.eu/vocab/fileRepository",
+          "reverse": true
+        },
+        "https://openminds.ebrains.eu/vocab/format",
+        "https://openminds.ebrains.eu/vocab/name"
       ]
     },
     {
