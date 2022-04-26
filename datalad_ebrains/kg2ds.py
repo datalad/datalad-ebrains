@@ -201,7 +201,7 @@ def process_revision(ds, rev_id, rev_record, auth_token):
         #    'ebrains_last_modified={last_modified}',
         #    'ebrain_last_modification_userid={last_modifier}',
         ),
-        #fast=True,
+        fast=True,
         save=False,
         result_renderer='disabled',
         return_type='generator',

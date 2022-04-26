@@ -236,22 +236,32 @@ def _filerec2annexrec(rec, baseurl):
     # filerepo 'prefix' and any subdirectories. Both are important to
     # get the internal dataset organization right
 
-    # make sure to strip any leading '/' to ensure a relative path
-    # TODO double-check windows FS semantics
-    rpath = iri[len(baseurl):].lstrip('/')
-
-    return dict(
+    props = dict(
         url=iri,
-        name=rpath,
-        # there is no such thing in the query ATM
-        #md5sum=rec['https://schema.hbp.eu/myQuery/hash'],
-        # TODO confirm unit rec['size']['unit'] == 'byte'
-        size=rec['size']['value'],
-        # TODO seems to give a mime type, confirm
-        content_type=rec['format']['fullName']
-        # TODO can we get a modification time?
-        # can we get the entity that last modified this file record
-        #last_modifier=rec[
-        #    'https://schema.hbp.eu/myQuery/lastModificationUserId'],
-        #last_modified=rec['https://schema.hbp.eu/myQuery/last_modified'],
+        # make sure to strip any leading '/' to ensure a relative path
+        # TODO double-check windows FS semantics
+        name=iri[len(baseurl):].lstrip('/'),
     )
+    md5sum = None
+    for hsh in rec.get('hash', {}):
+        if hsh.get('algorithm') == 'MD5':
+            md5sum = hsh.get('digest')
+    if md5sum:
+        props['md5sum'] = md5sum
+
+    size = rec.get('size', {}).get('value') \
+        if rec.get('size', {}).get('unit') == 'byte' else None
+    if size is not None:
+        props['size'] = size
+
+    content_type = rec.get('format', {}).get('fullName')
+    if content_type:
+        props['content_type'] = content_type
+
+    # TODO can we get a modification time?
+    # can we get the entity that last modified this file record
+    #last_modifier=rec[
+    #    'https://schema.hbp.eu/myQuery/lastModificationUserId'],
+    #last_modified=rec['https://schema.hbp.eu/myQuery/last_modified'],
+
+    return props
