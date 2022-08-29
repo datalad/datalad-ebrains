@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 import requests
 from urllib.parse import quote as urlquote
@@ -95,6 +96,8 @@ def query_kg4dataset(auth_token, dataset_id):
 
 
 def get_token(credential, allow_interactive=True):
+    return os.environ['DATALAD_ebrains_token']
+
     # we ultimately want a token, but it is only valid for a short amount of
     # time, and it has to be obtained via user/pass credentials each time
     user_auth = UserPassword(
