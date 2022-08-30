@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# datalad_metalad documentation build configuration file, created by
+# datalad_ebrains documentation build configuration file, created by
 # sphinx-quickstart on Tue Oct 13 08:41:19 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -13,7 +13,7 @@
 # serve to show the default.
 
 import sys
-import os
+import subprocess
 
 import datetime
 from os.path import (
@@ -35,17 +35,19 @@ import datalad_ebrains
 for setup_py_path in (opj(pardir, 'setup.py'),  # travis
                       opj(pardir, pardir, 'setup.py')):  # RTD
     if exists(setup_py_path):
-        sys.path.insert(0, os.path.abspath(dirname(setup_py_path)))
+        sys.path.insert(0, abspath(dirname(setup_py_path)))
+        # Build manpage
         try:
-            for cmd in 'manpage',: #'examples':
-                os.system(
-                    '{} build_{} --cmdsuite {} --manpath {} --rstpath {}'.format(
-                        setup_py_path,
-                        cmd,
-                        'datalad_ebrains:command_suite',
-                        abspath(opj(dirname(setup_py_path), 'build', 'man')),
-                        opj(dirname(__file__), 'generated', 'man')))
-        except:
+            subprocess.run(
+                args=[setup_py_path, 'build_manpage',
+                     '--cmdsuite', 'datalad_helloworld:command_suite',
+                     '--manpath', abspath(opj(
+                         dirname(setup_py_path), 'build', 'man')),
+                     '--rstpath', opj(dirname(__file__), 'generated', 'man'),
+                     ],
+                check=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError):
             # shut up and do your best
             pass
 
@@ -101,7 +103,7 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = "en"
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -136,3 +138,8 @@ html_split_index = True
 
 # If true, links to the reST sources are added to the pages.
 html_show_sourcelink = False
+
+# smart quotes are incompatible with the RST flavor of the generated manpages
+# but see `smartquotes_action` for more fine-grained control, in case
+# some of this functionality is needed
+smartquotes = False
