@@ -5,8 +5,6 @@ from pathlib import Path
 import requests
 from urllib.parse import quote as urlquote
 
-from datalad.downloaders.credentials import UserPassword
-from datalad import ui
 
 lgr = logging.getLogger('datalad.ebrains.kg_query')
 
@@ -96,42 +94,14 @@ def query_kg4dataset(auth_token, dataset_id):
 
 
 def get_token(credential, allow_interactive=True):
-    return os.environ['DATALAD_ebrains_token']
-
-    # we ultimately want a token, but it is only valid for a short amount of
-    # time, and it has to be obtained via user/pass credentials each time
-    user_auth = UserPassword(
-        name=credential,
-        url='https://ebrains.eu/register',
-    )
-    do_interactive = allow_interactive and ui.is_interactive()
-
-    # get auth if known or interactive -- we do not support first-time entry
-    # during a test run
-    userpass = user_auth() if do_interactive or user_auth.is_known else None
-    if not userpass:
-        raise RuntimeError(f'No {credential} credential could be obtained')
-
-    # get the token from EBRAINS
-    headers = {
-        'accept': 'application/json',
-        'Content-Type': 'application/json',
-    }
-    data = json.dumps({
-        'username': userpass['user'],
-        'password': userpass['password'],
-    })
-    response = requests.post(
-        'https://data-proxy.ebrains.eu/api/auth/token',
-        headers=headers,
-        data=data
-    )
-    if response.status_code == 200:
-        return response.json()
-
-    raise RuntimeError(
-        f"Failed to obtain EBRAINS token [HTTP {response.status_code}]: "
-        f"{response.text}")
+    if 'DATALAD_ebrains_token' in os.environ:
+        return os.environ['DATALAD_ebrains_token']
+    elif 'KG_TOKEN' in os.environ:
+        return os.environ['KG_TOKEN']
+    else:
+        raise RuntimeError(
+            'No EBRAINS access token defined in environment, '
+            'see datalad ebrains-authenticate command for more information.')
 
 
 class KGQueryException(RuntimeError):
