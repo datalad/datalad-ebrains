@@ -20,6 +20,8 @@ command_suite = (
             # optional name of the command in the Python API
             'ebrains_kg2ds'
         ),
+        ('datalad_ebrains.authenticate', 'Authenticate',
+         'ebrains-authenticate', 'ebrains_authenticate')
     ]
 )
 
