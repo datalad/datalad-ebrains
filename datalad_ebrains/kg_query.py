@@ -149,25 +149,6 @@ def validate_query_results(res, dataset_id):
     return ds_res
 
 
-def get_kgds_parent_id(kgds):
-    """Return ID of parent revision of the given dataset record
-
-    Returns
-    -------
-    str or None
-      If no revision ID is found, None is returned
-    """
-    revof = kgds.get(ds_revision_key, [])
-    if not revof:
-        return None
-    if len(revof) > 1:
-        lgr.warn(
-            "More than on 'wasRevisionOf' for dataset record, "
-            "proceeding with first entry "
-            "(dataset will have incomplete version history)")
-    return revof[0].get('https://schema.hbp.eu/myQuery/identifier', None)
-
-
 def query_kg4files(auth_token, filerepo_id):
     url = "{}?stage=IN_PROGRESS&fileRepositoryId={}".format(
         kg_file_query,
