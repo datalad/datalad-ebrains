@@ -52,10 +52,4 @@ jobs:
         echo "== mount >>"
         mount
         echo "<< mount =="
-        python -m nose -s -v --with-doctest --with-coverage --cover-package datalad_ebrains datalad_ebrains
-    - name: Report coverage
-      run: |
-        python -m coverage xml
-        curl -Os "https://uploader.codecov.io/latest/linux/codecov"
-        chmod +x codecov
-        ./codecov
+        python -m pytest -s -v --doctest-modules --cov=datalad_ebrains --pyargs datalad_ebrains

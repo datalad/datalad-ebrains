@@ -1,4 +1,4 @@
-from datalad.tests.utils import assert_result_count
+from datalad.tests.utils_pytest import assert_result_count
 
 
 def test_register():
@@ -9,4 +9,3 @@ def test_register():
     #    da.ebrains_kg2ds(),
     #    1,
     #    action='demo')
-
