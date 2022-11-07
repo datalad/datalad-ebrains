@@ -93,7 +93,7 @@ def query_kg4dataset(auth_token, dataset_id):
     return qres
 
 
-def get_token(credential, allow_interactive=True):
+def get_token():
     if 'DATALAD_ebrains_token' in os.environ:
         return os.environ['DATALAD_ebrains_token']
     elif 'KG_TOKEN' in os.environ:
@@ -208,9 +208,9 @@ def _filerec2annexrec(rec, baseurl):
     if size is not None:
         props['size'] = size
 
-    content_type = rec.get('format', {}).get('fullName')
+    content_type = rec.get('format', {})
     if content_type:
-        props['content_type'] = content_type
+        props['content_type'] = content_type.get('fullName')
 
     # TODO can we get a modification time?
     # can we get the entity that last modified this file record

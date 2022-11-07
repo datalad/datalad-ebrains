@@ -196,11 +196,12 @@ def process_revision(ds, rev_id, rev_record, auth_token):
         # we have a better idea than "auto"
         exclude_autometa='*',
         # and here it is
-        meta=(
-            'content_type={content_type}',
+        #meta=(
+        # some EBRAINS dataset don't even have that
+        #    'content_type={content_type}',
         #    'ebrains_last_modified={last_modified}',
         #    'ebrain_last_modification_userid={last_modifier}',
-        ),
+        #),
         fast=True,
         save=False,
         result_renderer='disabled',
