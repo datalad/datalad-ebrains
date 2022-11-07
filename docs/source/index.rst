@@ -11,6 +11,7 @@ High-level API commands
 .. autosummary::
    :toctree: generated
 
+   ebrains_authenticate
    ebrains_kg2ds
 
 
@@ -20,6 +21,7 @@ Command line reference
 .. toctree::
    :maxdepth: 1
 
+   generated/man/datalad-ebrains-authenticate
    generated/man/datalad-ebrains-kg2ds
 
 
