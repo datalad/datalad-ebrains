@@ -122,7 +122,7 @@ class FairGraphQuery:
             result_renderer='disabled',
             return_type='generator',
         )
- 
+
     def get_file_records(self, ds, kg_dsver):
         # the file repo IRI provides the reference for creating relative
         # file paths
@@ -167,7 +167,8 @@ class FairGraphQuery:
             cur_index += len(batch)
 
     def import_metadata(self, ds, kg_dsver):
-        (ds.pathobj / 'version').write_text(kg_dsver.version_identifier)
+        #(ds.pathobj / 'version').write_text(kg_dsver.version_identifier)
+        pass
 
     def save_ds_version(self, ds, kg_dsver):
         author_date = kg_dsver.release_date.isoformat()
