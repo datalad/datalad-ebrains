@@ -109,7 +109,7 @@ class FairGraphQuery:
             urlformat='{url}',
             filenameformat='{name}',
             # construct annex key from EBRAINS supplied info
-            #key='et:MD5-s{size}--{md5sum}',
+            key='et:MD5-s{size}--{md5sum}',
             # we will have a better idea than "auto"
             exclude_autometa='*',
             # and here it would be
