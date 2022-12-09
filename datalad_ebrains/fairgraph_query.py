@@ -1,7 +1,10 @@
 
 import logging
 import os
-from pathlib import Path
+from pathlib import (
+    Path,
+    PurePosixPath,
+)
 from unittest.mock import patch
 from urllib.parse import (
     quote,
@@ -12,7 +15,6 @@ import uuid
 from fairgraph import KGClient
 import fairgraph.openminds.core as omcore
 
-from datalad_next.constraints.dataset import EnsureDataset
 from datalad_next.datasets import Dataset
 
 
@@ -131,7 +133,13 @@ class FairGraphQuery:
         # input is like: https://example.com/<basepath>?prefix=MPM-collections/13/
         # output is: https://example.com/<basepath>
         # the prefix is part of the file IRIs again
-        dvr_baseurl = urlparse(dvr.iri.value)._replace(query='').geturl()
+        dvr_url_p = urlparse(dvr.iri.value)
+        dvr_prefix = dvr_url_p.query
+        # this is a prefix and there are no other variables
+        assert dvr_prefix.startswith('prefix=')
+        assert dvr_prefix.count('=') == 1
+        dvr_prefix = dvr_prefix[len('prefix='):]
+        dvr_baseurl = dvr_url_p._replace(query='').geturl()
         for f in self.iter_files(dvr):
             f_url = f.iri.value
             # the IRI is not a valid URL(?!), we must quote the path
@@ -143,9 +151,19 @@ class FairGraphQuery:
             assert f_url.startswith(dvr_baseurl)
             # we presently cannot understand non-md5 hashes
             assert f.hash.algorithm.lower() == 'md5'
+            fname = f_url[len(dvr_baseurl):].lstrip('/')
+            assert fname.startswith(dvr_prefix)
+            # strip file repository prefix
+            # TODO check https://github.com/datalad/datalad-ebrains/issues/39
+            # if that is desirable
+            fname = fname[len(dvr_prefix):]
+            # we have a relative posix path now
+            fname = PurePosixPath(fname)
+            # turn into a Platform native path
+            fname = Path(*fname.parts)
             yield dict(
                 url=f_url,
-                name=f_url[len(dvr_baseurl):].lstrip('/'),
+                name=str(fname),
                 md5sum=f.hash.digest,
                 # assumed to be in bytes
                 size=f.storage_size.value,
