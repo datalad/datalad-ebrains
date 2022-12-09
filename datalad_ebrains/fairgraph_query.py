@@ -13,6 +13,8 @@ from fairgraph import KGClient
 import fairgraph.openminds.core as omcore
 
 from datalad_next.constraints.dataset import EnsureDataset
+from datalad_next.datasets import Dataset
+
 
 lgr = logging.getLogger('datalad.ext.ebrains.fairgraph_query')
 
@@ -22,11 +24,11 @@ class FairGraphQuery:
         # picks up token from KG_AUTH_TOKEN
         self.client = KGClient()
 
-    def bootstrap(self, from_id: str, path: Path):
+    def bootstrap(self, from_id: str, dl_ds: Dataset):
         kg_ds = self.get_dataset_from_id(from_id)
         # create datalad dataset
         # TODO support existing datasets
-        ds = self.create_ds(path, kg_ds)
+        ds = self.create_ds(dl_ds, kg_ds)
         kg_dsversions = kg_ds.versions
 
         # TODO support a starting version for the import
@@ -35,17 +37,18 @@ class FairGraphQuery:
             yield from self.import_datasetversion(
                 ds, kg_dsver.resolve(self.client))
 
-    def create_ds(self, path, kg_ds):
+    def create_ds(self, dl_ds, kg_ds):
         # create the dataset using the timestamp and agent of the
         # first version
         # TODO resolving the first version will practically
         # cause a duplication of that request later.
         # needs a better structure
+        # TODO this may not be a list that is indexable
         kg_dsver = kg_ds.versions[0].resolve(self.client)
         with patch.dict(
                 os.environ,
                 self.get_agent_info(kg_dsver)):
-            ds = EnsureDataset()(path).ds.create(result_renderer='disabled')
+            ds = dl_ds.create(result_renderer='disabled')
             # we create a reproducible dataset ID from the KG dataset ID
             # we are not reusing it directly, because we have two linked
             # but different objects

@@ -1,4 +1,4 @@
-"""DataLad demo extension"""
+"""DataLad EBRAINS extension"""
 
 __docformat__ = 'restructuredtext'
 
@@ -9,17 +9,8 @@ command_suite = (
     # description of the command suite, displayed in cmdline help
     "HBP/EBRAINS support",
     [
-        # specification of a command, any number of commands can be defined
-        (
-            # importable module that contains the command implementation
-            'datalad_ebrains.kg2ds',
-            # name of the command class implementation in above module
-            'KnowledgeGraph2Dataset',
-            # optional name of the command in the cmdline API
-            'ebrains-kg2ds',
-            # optional name of the command in the Python API
-            'ebrains_kg2ds'
-        ),
+        ('datalad_ebrains.clone', 'Clone',
+         'ebrains-clone', 'ebrains_clone'),
         ('datalad_ebrains.authenticate', 'Authenticate',
          'ebrains-authenticate', 'ebrains_authenticate')
     ]
