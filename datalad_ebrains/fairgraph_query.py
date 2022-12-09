@@ -71,7 +71,7 @@ class FairGraphQuery:
             # `id` might be the ID of a Dataset directly
             ds = omcore.Dataset.from_id(id, self.client)
             return ds
-        ds = omcore.Dataset.from_alias(dv.alias, self.client)
+        ds = omcore.Dataset.list(self.client, versions=dv)[0]
         return ds
 
     def import_datasetversion(self, ds, kg_dsver):
