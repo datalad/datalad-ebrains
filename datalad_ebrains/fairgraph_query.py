@@ -31,7 +31,9 @@ class FairGraphQuery:
         # create datalad dataset
         # TODO support existing datasets
         ds = self.create_ds(dl_ds, kg_ds)
-        kg_dsversions = kg_ds.versions
+        # robust handling of single-version datasets
+        kg_dsversions = kg_ds.versions \
+            if isinstance(kg_ds.versions, list) else [kg_ds.versions]
 
         # TODO support a starting version for the import
         # TODO maybe derive automatically from a tag?
@@ -45,8 +47,12 @@ class FairGraphQuery:
         # TODO resolving the first version will practically
         # cause a duplication of that request later.
         # needs a better structure
-        # TODO this may not be a list that is indexable
-        kg_dsver = kg_ds.versions[0].resolve(self.client)
+        try:
+            kg_dsver = kg_ds.versions[0].resolve(self.client)
+        except TypeError:
+            # this may not be a list that is indexable, in case of
+            # only a single version being known to the KG
+            kg_dsver = kg_ds.versions.resolve(self.client)
         with patch.dict(
                 os.environ,
                 self.get_agent_info(kg_dsver)):
