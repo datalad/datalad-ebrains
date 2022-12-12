@@ -7,13 +7,11 @@ from datalad_next.commands import (
     Parameter,
     build_doc,
     eval_results,
-    get_status_dict,
 )
 from datalad_next.constraints import (
     EnsureNone,
     EnsureStr,
 )
-from datalad_next.constraints.base import Constraint
 from datalad_next.constraints.dataset import EnsureDataset
 from datalad_next.datasets import datasetmethod
 
@@ -22,21 +20,8 @@ from datalad_ebrains.fairgraph_query import FairGraphQuery
 
 lgr = logging.getLogger('datalad.ext.ebrains.clone')
 
-uuid_regex = '^.*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*$'
-
-
-class EnsureUUID(Constraint):
-    """Ensure that input is a valid UUID.
-    """
-    def __call__(self, value):
-        from uuid import UUID
-        return str(UUID(value))
-
-    def short_description(self):
-        return 'UUID'
-
-    def long_description(self):
-        return "value must be a valid UUID"
+uuid_regex = \
+    '^.*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*$'
 
 
 @build_doc
