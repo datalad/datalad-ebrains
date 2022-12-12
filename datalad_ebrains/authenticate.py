@@ -15,6 +15,20 @@ from datalad.ui import ui
 
 @build_doc
 class Authenticate(Interface):
+    """Obtain an EBRAINS authentication token
+
+    This command executes the "device authorization flow". It will present a
+    URL to a webpage. On this page, a user can log in with their EBRAINS
+    credentials. When successfully logged in, this command will return
+    a token that can be used to authenticate for additional operations.
+
+    A common usage in a POSIX shell would be::
+
+        export KG_AUTH_TOKEN=`datalad ebrains-authenticate`
+
+    which assignes the token to the ``KG_AUTH_TOKEN`` environment variable.
+    This variable is, for example, honored by the ``ebrains-clone`` command.
+    """
     @staticmethod
     @eval_results
     def __call__():
