@@ -195,9 +195,6 @@ class FairGraphQuery:
         pass
 
     def save_ds_version(self, ds, kg_dsver):
-        author_date = kg_dsver.release_date.isoformat()
-        author_name = 'ebrain'
-        author_email = 'ebrains@datalad.org'
         with patch.dict(os.environ, self.get_agent_info(kg_dsver)):
             yield from ds.save(
                 # TODO wrap the message?
@@ -212,7 +209,11 @@ class FairGraphQuery:
             )
 
     def get_agent_info(self, kg_dsver):
-        author_date = kg_dsver.release_date.isoformat()
+        try:
+            author_date = kg_dsver.release_date.isoformat()
+        except AttributeError:
+            # https://github.com/HumanBrainProject/fairgraph/issues/62
+            author_date = ''
         author_name = 'DataLad-EBRAINS exporter'
         author_email = 'ebrains@datalad.org'
         return {
