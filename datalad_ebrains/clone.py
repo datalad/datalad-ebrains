@@ -1,16 +1,17 @@
 import logging
 from pathlib import Path
 import re
+from typing import Dict
 
 from datalad_next.commands import (
-    Interface,
+    ValidatedInterface,
     Parameter,
     build_doc,
     eval_results,
 )
 from datalad_next.constraints import (
-    EnsureNone,
-    EnsureStr,
+    EnsurePath,
+    EnsureURL,
 )
 from datalad_next.constraints.dataset import EnsureDataset
 from datalad_next.datasets import datasetmethod
@@ -25,7 +26,7 @@ uuid_regex = \
 
 
 @build_doc
-class Clone(Interface):
+class Clone(ValidatedInterface):
     """Export any dataset from the EBRAINS Knowledge Graph (KG) as a dataset
 
     *Obtain authorization for performing KG queries*
@@ -46,8 +47,8 @@ class Clone(Interface):
             args=("source",),
             metavar='URL',
             doc="""URL including an ID of a dataset in the knowledge graph.
-            Such UUID can be found in the trailing part of the URL when
-            looking at a dataset on http://kg.ebrains.eu""",
+            Such UUIDs can be found in the trailing part of the URL when
+            looking at a dataset on https://search.kg.ebrains.eu""",
         ),
         path=Parameter(
             args=("path",),
@@ -58,30 +59,25 @@ class Clone(Interface):
         dataset=Parameter(
             args=("-d", "--dataset"),
             doc=""""Dataset to create""",
-            constraints=EnsureDataset() | EnsureNone()
         ),
-        credential=Parameter(
-            args=('--credential',),
-            constraints=EnsureStr() | EnsureNone(),
-            metavar='NAME',
-            doc="""name of the credential providing the EBRAINS username
-            and password. Username and password can be supplied via
-            configuration setting 'datalad.credential.<name>.{user|password}',
-            or environment variables DATALAD_CREDENTIAL_<NAME>_{USER|PASSWORD},
-            or will be queried from the active credential store using the
-            provided name. If none is provided, the default name 'ebrains'
-            will be used."""),
+    )
+
+    _validators_ = dict(
+        # must be a URL with any UUID in the string
+        source=EnsureURL(match=uuid_regex),
+        # non-existing or empty, EnsurePath cannot express that yet
+        path=EnsurePath(),
+        dataset=EnsureDataset(),
     )
 
     @staticmethod
     @datasetmethod(name='ebrains_clone')
     @eval_results
-    def __call__(source, path=None, *, dataset=None, credential='ebrains'):
+    def __call__(source, path=None, *, dataset=None):
         source_match = re.match(uuid_regex, source)
-        if not source_match:
-            raise ValueError('URL does not contain a dataset UUID')
-
         ebrains_id = source_match.group(1)
+        # this is ensured by the constraint
+        assert ebrains_id
 
         target_ds_param = EnsureDataset(installed=False)(path or Path.cwd())
 
