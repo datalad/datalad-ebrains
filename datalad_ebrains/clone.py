@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 import re
-from typing import Dict
+import warnings
 
 from datalad_next.commands import (
     ValidatedInterface,
@@ -89,8 +89,10 @@ class Clone(ValidatedInterface):
             ds=target_ds_param.ds,
         )
 
-        for res in fq.bootstrap(ebrains_id, target_ds_param.ds):
-            yield dict(
-                res_kwargs,
-                **res,
-            )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for res in fq.bootstrap(ebrains_id, target_ds_param.ds):
+                yield dict(
+                    res_kwargs,
+                    **res,
+                )
