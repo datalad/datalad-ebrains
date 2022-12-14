@@ -16,6 +16,7 @@ from fairgraph import KGClient
 import fairgraph.openminds.core as omcore
 
 from datalad_next.datasets import Dataset
+from datalad_next.utils import log_progress
 
 
 lgr = logging.getLogger('datalad.ext.ebrains.fairgraph_query')
@@ -36,10 +37,23 @@ class FairGraphQuery:
             if isinstance(kg_ds.versions, list) else [kg_ds.versions]
 
         # TODO support a starting version for the import
-        # TODO maybe derive automatically from a tag?
-        for kg_dsver in kg_dsversions:
-            yield from self.import_datasetversion(
-                ds, kg_dsver.resolve(self.client))
+        # TODO maybe derive starting version automatically from a tag?
+        log_id = f'ebrains-{from_id}'
+        log_progress(
+            lgr.info, log_id,
+            'Querying dataset versions',
+            unit=' Versions',
+            label='Querying',
+            total=len(kg_dsversions),
+        )
+        try:
+            for kg_dsver in kg_dsversions:
+                yield from self.import_datasetversion(
+                    ds, kg_dsver.resolve(self.client))
+                log_progress(lgr.info, log_id,
+                             'Completed version', update=1, increment=True)
+        finally:
+            log_progress(lgr.info, log_id, "Done querying knowledge graph")
 
     def create_ds(self, dl_ds, kg_ds):
         # create the dataset using the timestamp and agent of the
