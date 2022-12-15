@@ -12,7 +12,7 @@ High-level API commands
    :toctree: generated
 
    ebrains_authenticate
-   ebrains_kg2ds
+   ebrains_clone
 
 
 Command line reference
@@ -22,7 +22,7 @@ Command line reference
    :maxdepth: 1
 
    generated/man/datalad-ebrains-authenticate
-   generated/man/datalad-ebrains-kg2ds
+   generated/man/datalad-ebrains-clone
 
 
 Indices and tables

@@ -29,7 +29,7 @@ jobs:
         git config --global user.name "GitHub Almighty"
     - uses: actions/checkout@v1
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 3.7
     - name: Install dependencies
@@ -44,6 +44,7 @@ jobs:
       env:
         # forces all test repos/paths into the VFAT FS
         TMPDIR: /crippledfs
+        DATALAD_TESTS_EBRAINS__OIDC__SECRET: ${{ secrets.EBRAINS_CI_SECRET }}
       run: |
         mkdir -p __testhome__
         cd __testhome__
