@@ -1,16 +1,15 @@
 import sys
 
-from datalad.interface.base import (
+from datalad import cfg as dlcfg
+from datalad_next.commands import (
     Interface,
     build_doc,
-)
-from datalad.interface.results import get_status_dict
-from datalad.interface.utils import (
     generic_result_renderer,
+    get_status_dict,
     eval_results,
 )
-from datalad.support.exceptions import CapturedException
-from datalad.ui import ui
+from datalad_next.exceptions import CapturedException
+from datalad_next.uis import ui_switcher as ui
 
 
 @build_doc
@@ -35,11 +34,20 @@ class Authenticate(Interface):
         from kg_core.kg import kg
         k = kg()
 
-        # this will present instructions, which URL to visit, and will return
-        # with a token str, once a user has successfully auhtenticated at
-        # EBRAINS
-        try:
+        oidc_secret = dlcfg.get('datalad.tests.ebrains-oidc-secret')
+        if oidc_secret:
+            # we know an OIDC client secret to use with the CI client
+            # this will only happen in specifcally set up test environments
+            k.with_credentials(
+                'datalad-ebrains-ci',
+                oidc_secret,
+            ).build()
+        else:
+            # this will present instructions, which URL to visit, and will
+            # return with a token str, once a user has successfully
+            # authenticated at EBRAINS
             k.with_device_flow()
+        try:
             # we redirect stdout to stderr temporarily to be able to only
             # output the token on stdout, separate from the instructions that
             # kg-core unconditionally prints to stdout.  this facilitates
