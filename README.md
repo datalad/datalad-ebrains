@@ -1,6 +1,6 @@
 # DataLad EBRAINS extension
 
-[![Build status](https://ci.appveyor.com/api/projects/status/vld82efr44i6b6s3/branch/main?svg=true)](https://ci.appveyor.com/project/mih/datalad-ebrains/branch/main) [![codecov.io](https://codecov.io/github/datalad/datalad-ebrains/coverage.svg?branch=main)](https://codecov.io/github/datalad/datalad-ebrains?branch=main) [![crippled-filesystems](https://github.com/datalad/datalad-ebrains/workflows/crippled-filesystems/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Acrippled-filesystems) [![docs](https://github.com/datalad/datalad-ebrains/workflows/docs/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Adocs)
+[![Build status](https://ci.appveyor.com/api/projects/status/vld82efr44i6b6s3/branch/main?svg=true)](https://ci.appveyor.com/project/mih/datalad-ebrains/branch/main) [![codecov.io](https://codecov.io/github/datalad/datalad-ebrains/coverage.svg?branch=main)](https://codecov.io/github/datalad/datalad-ebrains?branch=main) [![crippled-filesystems](https://github.com/datalad/datalad-ebrains/workflows/crippled-filesystems/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Acrippled-filesystems) [![docs](https://github.com/datalad/datalad-ebrains/workflows/docs/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Adocs) [![Documentation Status](https://readthedocs.org/projects/datalad-ebrains/badge/?version=latest)](http://docs.datalad.org/projects/ebrains/en/latest/?badge=latest)
 
 EBRAINS is a digital research infrastructure, created by the EU-funded Human
 Brain Project, that gathers an extensive range of data and tools for brain
@@ -8,14 +8,29 @@ related research. EBRAINS capitalizes on the work performed by the Human
 Brain Project teams in digital neuroscience, brain medicine and brain-inspired
 technology.
 
-The goal for this extension is to provide the necessary software adaptors to
-inject and extract data and metadata in and out of the EBRAINS services and
-infrastructure.
+The purpose of this DataLad extension package is to represent and retrieve
+EBRAINS datasets as DataLad datasets (without requiring downloading or
+duplication of datasets hosted on EBRAINS) to make them compatible with
+the wider DataLad ecosystem.
 
-Command(s) provided by this extension
+Commands provided by this extension
 
-- `ebrains-kg2ds` -- Export a dataset in the [EBRAINS knowledge
-  graph](https://kg.ebrains.eu) into a DataLad dataset
+- `ebrains-authenticate` -- Obtain an EBRAINS authentication token
+- `ebrains-clone` -- Export a dataset from the [EBRAINS Knowledge
+  Graph](https://kg.ebrains.eu) as a DataLad dataset
+
+See the documentation for details:
+ http://docs.datalad.org/projects/ebrains/en/latest/
+
+## Installation
+
+```
+# create and enter a new virtual environment (optional)
+$ virtualenv --python=python3 ~/env/dl-ebrains
+$ . ~/env/dl-ebrains/bin/activate
+# install from GitHub
+$ python -m pip install git+https://github.com/datalad/datalad-ebrains.git
+```
 
 ## Support
 

@@ -17,15 +17,18 @@ class Authenticate(Interface):
     """Obtain an EBRAINS authentication token
 
     This command executes the "device authorization flow". It will present a
-    URL to a webpage. On this page, a user can log in with their EBRAINS
-    credentials. When successfully logged in, this command will return
-    a token that can be used to authenticate for additional operations.
+    URL to a webpage. Please note that any period ('.') at the end of the
+    displayed URL is not part of the URL.
+
+    On the linked page, a user can log in with their EBRAINS credentials. When
+    successfully logged in, this command will return a token that can be used
+    to authenticate for additional operations.
 
     A common usage in a POSIX shell would be::
 
         export KG_AUTH_TOKEN=`datalad ebrains-authenticate`
 
-    which assignes the token to the ``KG_AUTH_TOKEN`` environment variable.
+    which assigns the token to the ``KG_AUTH_TOKEN`` environment variable.
     This variable is, for example, honored by the ``ebrains-clone`` command.
     """
     @staticmethod
