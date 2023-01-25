@@ -15,6 +15,7 @@ import uuid
 from fairgraph import KGClient
 import fairgraph.openminds.core as omcore
 
+from datalad_next.exceptions import IncompleteResultsError
 from datalad_next.datasets import Dataset
 from datalad_next.utils import log_progress
 
@@ -31,7 +32,12 @@ class FairGraphQuery:
         kg_ds = self.get_dataset_from_id(from_id)
         # create datalad dataset
         # TODO support existing datasets
-        ds = self.create_ds(dl_ds, kg_ds)
+        try:
+            ds = self.create_ds(dl_ds, kg_ds)
+        except IncompleteResultsError as e:
+            # make sure to communicate the error outside
+            yield from e.failed
+            return
         # robust handling of single-version datasets
         kg_dsversions = kg_ds.versions \
             if isinstance(kg_ds.versions, list) else [kg_ds.versions]
