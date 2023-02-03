@@ -51,8 +51,7 @@ class FairGraphQuery:
         )
         try:
             for kg_dsver in kg_ds_versions:
-                yield from self.import_datasetversion(
-                    ds, kg_dsver.resolve(self.client))
+                yield from self.import_datasetversion(ds, kg_dsver)
                 log_progress(lgr.info, log_id,
                              'Completed version', update=1, increment=True)
         finally:
@@ -100,6 +99,10 @@ class FairGraphQuery:
         for ver in (ds.versions
                     if isinstance(ds.versions, list)
                     else [ds.versions]):
+            # resolving upfront might be suboptimal, but we know we need it
+            # eventually, and it takes a fraction of the time to retrieve a
+            # version-file-listing
+            ver = ver.resolve(self.client)
             versions.append(ver)
             if ver.uuid == target_version:
                 # do not go beyond the requested version
