@@ -1,3 +1,6 @@
+from datalad_next.tests.utils import assert_in_results
+
+
 def test_clone_reproducibility(tmp_path):
     clone_kwargs = dict(
         result_xfm='datasets',
@@ -20,6 +23,21 @@ def test_clone_reproducibility(tmp_path):
     v2_history = list(dsv2.repo.call_git_items_(['log', '--oneline']))
     # the two version histories must be bit-identical, for all shared versions
     assert v1_history == v2_history[1:]
+
+
+def test_unsupported_filerepo(tmp_path):
+    from datalad.api import ebrains_clone
+    res = ebrains_clone(
+        'https://search.kg.ebrains.eu/instances/d07f9305-1e75-4548-a348-b155fb323d31',
+        tmp_path,
+        result_renderer='disabled',
+        on_failure='ignore',
+    )
+    assert_in_results(
+        res, status='impossible',
+        error_message='Unrecognized file repository pointer '
+        'https://ftp.bigbrainproject.org/bigbrain-ftp/BigBrainRelease.2015/',
+    )
 
 
 def test_ebrain_clone(tmp_path):

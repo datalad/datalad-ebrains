@@ -15,7 +15,11 @@ import uuid
 from fairgraph import KGClient
 import fairgraph.openminds.core as omcore
 
-from datalad_next.exceptions import IncompleteResultsError
+from datalad_next.commands import get_status_dict
+from datalad_next.exceptions import (
+    CapturedException,
+    IncompleteResultsError,
+)
 from datalad_next.datasets import Dataset
 from datalad_next.utils import log_progress
 
@@ -135,25 +139,32 @@ class FairGraphQuery:
             Path(frec['path']).unlink()
 
     def import_files(self, ds, kg_dsver):
-        yield from ds.addurls(
-            # Turn query into an iterable of dicts for addurls
-            urlfile=self.get_file_records(ds, kg_dsver),
-            urlformat='{url}',
-            filenameformat='{name}',
-            # construct annex key from EBRAINS supplied info
-            key='et:MD5-s{size}--{md5sum}',
-            # we will have a better idea than "auto"
-            exclude_autometa='*',
-            # and here it would be
-            #meta=(
-            #    'ebrains_last_modified={last_modified}',
-            #    'ebrain_last_modification_userid={last_modifier}',
-            #),
-            fast=True,
-            save=False,
-            result_renderer='disabled',
-            return_type='generator',
-        )
+        try:
+            yield from ds.addurls(
+                # Turn query into an iterable of dicts for addurls
+                urlfile=self.get_file_records(ds, kg_dsver),
+                urlformat='{url}',
+                filenameformat='{name}',
+                # construct annex key from EBRAINS supplied info
+                key='et:MD5-s{size}--{md5sum}',
+                # we will have a better idea than "auto"
+                exclude_autometa='*',
+                # and here it would be
+                #meta=(
+                #    'ebrains_last_modified={last_modified}',
+                #    'ebrain_last_modification_userid={last_modifier}',
+                #),
+                fast=True,
+                save=False,
+                result_renderer='disabled',
+                return_type='generator',
+            )
+        except NotImplementedError as e:
+            yield get_status_dict(
+                status='impossible',
+                action='ebrains-clone',
+                exception=CapturedException(e),
+            )
 
     def get_file_records(self, ds, kg_dsver):
         # the file repo IRI provides the reference for creating relative
@@ -166,7 +177,10 @@ class FairGraphQuery:
         dvr_url_p = urlparse(dvr.iri.value)
         dvr_prefix = dvr_url_p.query
         # this is a prefix and there are no other variables
-        assert dvr_prefix.startswith('prefix=')
+        if not dvr_prefix.startswith('prefix='):
+            raise NotImplementedError(
+                f'Unrecognized file repository pointer {dvr.iri.value}')
+
         assert dvr_prefix.count('=') == 1
         dvr_prefix = dvr_prefix[len('prefix='):]
         dvr_baseurl = dvr_url_p._replace(query='').geturl()
