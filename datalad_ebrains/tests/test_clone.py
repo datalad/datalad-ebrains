@@ -19,8 +19,13 @@ def test_clone_reproducibility(tmp_path):
         tmp_path / 'v2',
         **clone_kwargs
     )[-1]
-    v1_history = list(dsv1.repo.call_git_items_(['log', '--oneline']))
-    v2_history = list(dsv2.repo.call_git_items_(['log', '--oneline']))
+    # make sure we check the corresponding branch on crippled FSes
+    # (will be the same for both datasets)
+    check_branch = dsv1.repo.get_corresponding_branch() \
+        or dsv1.repo.get_active_branch()
+    log_cmd = ['log', '--oneline', check_branch]
+    v1_history = list(dsv1.repo.call_git_items_(log_cmd))
+    v2_history = list(dsv2.repo.call_git_items_(log_cmd))
     # the two version histories must be bit-identical, for all shared versions
     assert v1_history == v2_history[1:]
 
