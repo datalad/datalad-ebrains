@@ -29,18 +29,15 @@ class FairGraphQuery:
         self.client = KGClient()
 
     def bootstrap(self, from_id: str, dl_ds: Dataset):
-        kg_ds = self.get_dataset_from_id(from_id)
+        kg_ds_uuid, kg_ds_versions = self.get_dataset_versions_from_id(from_id)
         # create datalad dataset
         # TODO support existing datasets
         try:
-            ds = self.create_ds(dl_ds, kg_ds)
+            ds = self.create_ds(dl_ds, kg_ds_versions[0], kg_ds_uuid)
         except IncompleteResultsError as e:
             # make sure to communicate the error outside
             yield from e.failed
             return
-        # robust handling of single-version datasets
-        kg_dsversions = kg_ds.versions \
-            if isinstance(kg_ds.versions, list) else [kg_ds.versions]
 
         # TODO support a starting version for the import
         # TODO maybe derive starting version automatically from a tag?
@@ -50,10 +47,10 @@ class FairGraphQuery:
             'Querying dataset versions',
             unit=' Versions',
             label='Querying',
-            total=len(kg_dsversions),
+            total=len(kg_ds_versions),
         )
         try:
-            for kg_dsver in kg_dsversions:
+            for kg_dsver in kg_ds_versions:
                 yield from self.import_datasetversion(
                     ds, kg_dsver.resolve(self.client))
                 log_progress(lgr.info, log_id,
@@ -61,21 +58,12 @@ class FairGraphQuery:
         finally:
             log_progress(lgr.info, log_id, "Done querying knowledge graph")
 
-    def create_ds(self, dl_ds, kg_ds):
+    def create_ds(self, dl_ds, kg_ds_init_version, kg_ds_uuid):
         # create the dataset using the timestamp and agent of the
         # first version
-        # TODO resolving the first version will practically
-        # cause a duplication of that request later.
-        # needs a better structure
-        try:
-            kg_dsver = kg_ds.versions[0].resolve(self.client)
-        except TypeError:
-            # this may not be a list that is indexable, in case of
-            # only a single version being known to the KG
-            kg_dsver = kg_ds.versions.resolve(self.client)
         with patch.dict(
                 os.environ,
-                self.get_agent_info(kg_dsver)):
+                self.get_agent_info(kg_ds_init_version)):
             ds = dl_ds.create(result_renderer='disabled')
             # we create a reproducible dataset ID from the KG dataset ID
             # we are not reusing it directly, because we have two linked
@@ -86,8 +74,9 @@ class FairGraphQuery:
                 str(
                     uuid.uuid5(
                         uuid.uuid5(uuid.NAMESPACE_DNS, 'datalad.org'),
-                    kg_ds.uuid,
-                )),
+                        kg_ds_uuid,
+                    )
+                ),
                 scope='branch',
             )
             # TODO establish meaningful gitattributes
@@ -95,15 +84,27 @@ class FairGraphQuery:
             ds.save(amend=True, result_renderer='disabled')
         return ds
 
-    def get_dataset_from_id(self, id):
+    def get_dataset_versions_from_id(self, id):
         try:
             dv = omcore.DatasetVersion.from_id(id, self.client)
+            target_version = dv.uuid
+            # determine the Dataset from the DatasetVersion we got
+            ds = omcore.Dataset.list(self.client, versions=dv)[0]
         except TypeError:
             # `id` might be the ID of a Dataset directly
             ds = omcore.Dataset.from_id(id, self.client)
-            return ds
-        ds = omcore.Dataset.list(self.client, versions=dv)[0]
-        return ds
+            # all of them
+            target_version = None
+        versions = []
+        # robust handling of single-version datasets
+        for ver in (ds.versions
+                    if isinstance(ds.versions, list)
+                    else [ds.versions]):
+            versions.append(ver)
+            if ver.uuid == target_version:
+                # do not go beyond the requested version
+                break
+        return ds.uuid, versions
 
     def import_datasetversion(self, ds, kg_dsver):
         self.clean_ds_worktree(ds)
