@@ -1,4 +1,9 @@
-from datalad_next.tests.utils import assert_in_results
+import pytest
+
+from datalad_next.tests.utils import (
+    assert_in_results,
+    assert_result_count,
+)
 
 
 def test_clone_reproducibility(tmp_path):
@@ -45,7 +50,26 @@ def test_unsupported_filerepo(tmp_path):
     )
 
 
-def test_ebrain_clone(tmp_path):
+def test_shallow_clone(tmp_path):
+    from datalad.api import (
+        Dataset,
+        ebrains_clone,
+    )
+    # clone Jülich Brain Atlas v3.0 and only this version
+    res = ebrains_clone(
+        'https://search.kg.ebrains.eu/instances/900a1c2d-4914-42d5-a316-5472afca0d90',
+        tmp_path,
+        depth=1,
+        result_renderer='disabled',
+    )
+    # the desired version, plus the create-dataset-commit
+    assert 2 == len(list(Dataset(tmp_path).repo.call_git_items_(
+        ['log', '--oneline'])))
+    # EBRAIN landing page states: 1678 files -- we must match that number
+    assert_result_count(res, 1678, type='file')
+
+
+def test_ebrains_clone(tmp_path):
     from datalad.api import ebrains_clone
     # smoke test, leave result rendering on to see what happens in the logs
     ebrains_clone(
@@ -53,3 +77,20 @@ def test_ebrain_clone(tmp_path):
         # across these versions
         'https://search.kg.ebrains.eu/instances/5a16d948-8d1c-400c-b797-8a7ad29944b2',
         tmp_path)
+
+
+def test_clone_invalid_call(tmp_path):
+    # make sure the parameter validation is working
+    from datalad.api import ebrains_clone
+    # always needs a `source`
+    with pytest.raises(TypeError):
+        ebrains_clone()
+    # must contain a UUID
+    with pytest.raises(ValueError):
+        ebrains_clone('bogus')
+    # depth must be an int
+    with pytest.raises(ValueError):
+        ebrains_clone('5a16d948-8d1c-400c-b797-8a7ad29944b2', depth='mike')
+    # depth must be larger than 0
+    with pytest.raises(ValueError):
+        ebrains_clone('5a16d948-8d1c-400c-b797-8a7ad29944b2', depth=0)

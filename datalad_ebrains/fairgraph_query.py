@@ -33,8 +33,9 @@ class FairGraphQuery:
         # picks up token from KG_AUTH_TOKEN
         self.client = KGClient()
 
-    def bootstrap(self, from_id: str, dl_ds: Dataset):
-        kg_ds_uuid, kg_ds_versions = self.get_dataset_versions_from_id(from_id)
+    def bootstrap(self, from_id: str, dl_ds: Dataset, depth=None):
+        kg_ds_uuid, kg_ds_versions = self.get_dataset_versions_from_id(
+            from_id, depth=depth)
         # create datalad dataset
         # TODO support existing datasets
         try:
@@ -88,7 +89,7 @@ class FairGraphQuery:
             ds.save(amend=True, result_renderer='disabled')
         return ds
 
-    def get_dataset_versions_from_id(self, id):
+    def get_dataset_versions_from_id(self, id, depth=None):
         try:
             dv = omcore.DatasetVersion.from_id(id, self.client)
             target_version = dv.uuid
@@ -99,11 +100,18 @@ class FairGraphQuery:
             ds = omcore.Dataset.from_id(id, self.client)
             # all of them
             target_version = None
-        versions = []
         # robust handling of single-version datasets
-        for ver in (ds.versions
-                    if isinstance(ds.versions, list)
-                    else [ds.versions]):
+        candidate_versions = (
+            ds.versions
+            if isinstance(ds.versions, list)
+            else [ds.versions]
+        )
+        if depth:  # yes, we exclude zero too, makes no sense
+            # the the last N
+            candidate_versions = candidate_versions[-(depth):]
+
+        versions = []
+        for ver in candidate_versions:
             # resolving upfront might be suboptimal, but we know we need it
             # eventually, and it takes a fraction of the time to retrieve a
             # version-file-listing

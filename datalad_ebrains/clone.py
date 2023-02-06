@@ -11,7 +11,9 @@ from datalad_next.commands import (
     eval_results,
 )
 from datalad_next.constraints import (
+    EnsureInt,
     EnsurePath,
+    EnsureRange,
     EnsureURL,
 )
 from datalad_next.constraints.dataset import EnsureDataset
@@ -140,6 +142,12 @@ class Clone(ValidatedInterface):
             args=("-d", "--dataset"),
             doc=""""Dataset to create""",
         ),
+        depth=Parameter(
+            args=("--depth",),
+            doc=""""Create a shallow clone with a history truncated
+            to the specified number of version recorded in the knowledge
+            graph.""",
+        ),
     )
 
     _validator_ = EnsureCommandParameterization(dict(
@@ -148,12 +156,13 @@ class Clone(ValidatedInterface):
         # non-existing or empty, EnsurePath cannot express that yet
         path=EnsurePath(),
         dataset=EnsureDataset(),
+        depth=EnsureInt() & EnsureRange(min=1),
     ))
 
     @staticmethod
     @datasetmethod(name='ebrains_clone')
     @eval_results
-    def __call__(source, path=None, *, dataset=None):
+    def __call__(source, path=None, *, dataset=None, depth=None):
         source_match = re.match(uuid_regex, source)
         ebrains_id = source_match.group(1)
         # this is ensured by the constraint
@@ -171,7 +180,11 @@ class Clone(ValidatedInterface):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for res in fq.bootstrap(ebrains_id, target_ds_param.ds):
+            for res in fq.bootstrap(
+                    ebrains_id,
+                    target_ds_param.ds,
+                    depth=depth,
+            ):
                 yield dict(
                     res_kwargs,
                     **res,
