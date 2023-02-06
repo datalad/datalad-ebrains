@@ -4,6 +4,7 @@ import re
 import warnings
 
 from datalad_next.commands import (
+    EnsureCommandParameterization,
     ValidatedInterface,
     Parameter,
     build_doc,
@@ -141,13 +142,13 @@ class Clone(ValidatedInterface):
         ),
     )
 
-    _validators_ = dict(
+    _validator_ = EnsureCommandParameterization(dict(
         # must be a URL with any UUID in the string
         source=EnsureURL(match=uuid_regex),
         # non-existing or empty, EnsurePath cannot express that yet
         path=EnsurePath(),
         dataset=EnsureDataset(),
-    )
+    ))
 
     @staticmethod
     @datasetmethod(name='ebrains_clone')
