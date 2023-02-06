@@ -1,4 +1,5 @@
 
+from functools import partial
 import logging
 import os
 from pathlib import (
@@ -170,41 +171,41 @@ class FairGraphQuery:
         # the file repo IRI provides the reference for creating relative
         # file paths
         dvr = kg_dsver.repository.resolve(self.client)
-        # get the repos base url by removing the query string
-        # input is like: https://example.com/<basepath>?prefix=MPM-collections/13/
-        # output is: https://example.com/<basepath>
-        # the prefix is part of the file IRIs again
+        # EBRAINS uses different file repositories that need slightly
+        # different handling
         dvr_url_p = urlparse(dvr.iri.value)
-        dvr_prefix = dvr_url_p.query
-        # this is a prefix and there are no other variables
-        if not dvr_prefix.startswith('prefix='):
+        if dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
+                and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
+            get_fname = _get_fname_dataproxy_v1_bucket
+        elif dvr_url_p.netloc == 'object.cscs.ch' \
+                and dvr_url_p.query.startswith('prefix='):
+            # get the repos base url by removing the query string
+            # input is like:
+            # https://example.com/<basepath>?prefix=MPM-collections/13/
+            # output is: https://example.com/<basepath>
+            # the prefix is part of the file IRIs again
+            dvr_prefix = dvr_url_p.query
+            # this is a prefix and there are no other variables
+            assert dvr_prefix.startswith('prefix=')
+            assert dvr_prefix.count('=') == 1
+            dvr_prefix = dvr_prefix[len('prefix='):]
+            get_fname = partial(
+                _get_fname_cscs_repo,
+                # baseurl
+                dvr_url_p._replace(query='').geturl(),
+                # filerepo prefix
+                dvr_prefix,
+            )
+        else:
             raise NotImplementedError(
                 f'Unrecognized file repository pointer {dvr.iri.value}')
 
-        assert dvr_prefix.count('=') == 1
-        dvr_prefix = dvr_prefix[len('prefix='):]
-        dvr_baseurl = dvr_url_p._replace(query='').geturl()
         for f in self.iter_files(dvr):
-            f_url = f.iri.value
-            # the IRI is not a valid URL(?!), we must quote the path
-            # to make it such
-            f_url_p = urlparse(f_url)
-            f_url = f_url_p._replace(path=quote(f_url_p.path)).geturl()
-            # we presently no no better way to determine a relative file path
-            # than to "subtract" the base URL
-            assert f_url.startswith(dvr_baseurl)
             # we presently cannot understand non-md5 hashes
             assert f.hash.algorithm.lower() == 'md5'
-            fname = f_url[len(dvr_baseurl):].lstrip('/')
-            assert fname.startswith(dvr_prefix)
-            # strip file repository prefix
-            # TODO check https://github.com/datalad/datalad-ebrains/issues/39
-            # if that is desirable
-            fname = fname[len(dvr_prefix):]
-            # we have a relative posix path now
-            fname = PurePosixPath(fname)
-            # turn into a Platform native path
-            fname = Path(*fname.parts)
+
+            f_url = _file_iri_to_url(f.iri.value)
+            fname = get_fname(f)
             yield dict(
                 url=f_url,
                 name=str(fname),
@@ -264,3 +265,37 @@ class FairGraphQuery:
             'GIT_COMMITTER_EMAIL': author_email,
             'GIT_COMMITTER_DATE': author_date,
         }
+
+
+def _get_fname_dataproxy_v1_bucket(f):
+    f_url_p = urlparse(f.iri.value)
+    assert f_url_p.netloc == 'data-proxy.ebrains.eu'
+    assert f_url_p.path.startswith('/api/v1/public/buckets/')
+    path = PurePosixPath(f_url_p.path)
+    # take everything past the bucket_id and turn into a Platform native path
+    return Path(*path.parts[6:])
+
+
+def _get_fname_cscs_repo(baseurl, prefix, f):
+    f_url = f.iri.value
+    # we presently have no better way to determine a relative file path
+    # than to "subtract" the base URL
+    assert f_url.startswith(baseurl)
+    fname = f_url[len(baseurl):].lstrip('/')
+    assert fname.startswith(prefix)
+    # strip file repository prefix
+    # TODO check https://github.com/datalad/datalad-ebrains/issues/39
+    # if that is desirable
+    fname = fname[len(prefix):]
+    # we have a relative posix path now
+    fname = PurePosixPath(fname)
+    # turn into a Platform native path
+    fname = Path(*fname.parts)
+    return fname
+
+
+def _file_iri_to_url(iri):
+    # the IRI is not a valid URL(?!), we must quote the path
+    # to make it such
+    f_url_p = urlparse(iri)
+    return f_url_p._replace(path=quote(f_url_p.path)).geturl()

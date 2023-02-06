@@ -49,8 +49,7 @@ def test_ebrain_clone(tmp_path):
     from datalad.api import ebrains_clone
     # smoke test, leave result rendering on to see what happens in the logs
     ebrains_clone(
-        # this will pull 8 version, but is not pointing to a full dataset
-        # (i.e. ALL versions), because of
-        # https://github.com/datalad/datalad-ebrains/issues/47
-        'https://kg.ebrains.eu/api/instances/a8932c7e-063c-4131-ab96-996d843998e9',
+        # this will pull many version, and use different file repository types
+        # across these versions
+        'https://search.kg.ebrains.eu/instances/5a16d948-8d1c-400c-b797-8a7ad29944b2',
         tmp_path)
