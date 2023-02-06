@@ -214,16 +214,18 @@ class FairGraphQuery:
                 size=f.storage_size.value,
             )
 
-    def iter_files(self, dvr, chunk_size=100):
+    # the chunk size is large, because the per-request latency costs
+    # are enourmous
+    # https://github.com/HumanBrainProject/fairgraph/issues/57
+    def iter_files(self, dvr, chunk_size=10000):
         cur_index = 0
         while True:
             batch = omcore.File.list(
                 self.client,
                 file_repository=dvr,
-                limit=chunk_size,
+                size=chunk_size,
                 from_index=cur_index)
-            for f in batch:
-                yield f
+            yield from batch
             if len(batch) < chunk_size:
                 # there is no point in asking for another batch
                 return
