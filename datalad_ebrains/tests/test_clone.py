@@ -62,9 +62,12 @@ def test_shallow_clone(tmp_path):
         depth=1,
         result_renderer='disabled',
     )
+    repo = Dataset(tmp_path).repo
+    check_branch = repo.get_corresponding_branch() \
+        or repo.get_active_branch()
+    log_cmd = ['log', '--oneline', check_branch]
     # the desired version, plus the create-dataset-commit
-    assert 2 == len(list(Dataset(tmp_path).repo.call_git_items_(
-        ['log', '--oneline'])))
+    assert 2 == len(list(repo.call_git_items_(log_cmd)))
     # EBRAIN landing page states: 1678 files -- we must match that number
     assert_result_count(res, 1678, type='file')
 
