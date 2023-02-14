@@ -296,7 +296,8 @@ def _get_fname_cscs_repo(baseurl, prefix, f):
     # strip file repository prefix
     # TODO check https://github.com/datalad/datalad-ebrains/issues/39
     # if that is desirable
-    fname = fname[len(prefix):]
+    # also strip any leading slash, any absolute path is invalid here
+    fname = fname[len(prefix):].lstrip('/')
     # we have a relative posix path now
     fname = PurePosixPath(fname)
     # turn into a Platform native path
