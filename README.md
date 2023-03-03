@@ -1,6 +1,10 @@
 # DataLad EBRAINS extension
 
-[![Build status](https://ci.appveyor.com/api/projects/status/vld82efr44i6b6s3/branch/main?svg=true)](https://ci.appveyor.com/project/mih/datalad-ebrains/branch/main) [![codecov.io](https://codecov.io/github/datalad/datalad-ebrains/coverage.svg?branch=main)](https://codecov.io/github/datalad/datalad-ebrains?branch=main) [![crippled-filesystems](https://github.com/datalad/datalad-ebrains/workflows/crippled-filesystems/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Acrippled-filesystems) [![docs](https://github.com/datalad/datalad-ebrains/workflows/docs/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Adocs) [![Documentation Status](https://readthedocs.org/projects/datalad-ebrains/badge/?version=latest)](http://docs.datalad.org/projects/ebrains/en/latest/?badge=latest)
+[![Build status](https://ci.appveyor.com/api/projects/status/vld82efr44i6b6s3/branch/main?svg=true)](https://ci.appveyor.com/project/mih/datalad-ebrains/branch/main)
+[![codecov](https://codecov.io/gh/datalad/datalad-ebrains/branch/main/graph/badge.svg?token=68HE2IM6U6)](https://codecov.io/gh/datalad/datalad-ebrains)
+[![crippled-filesystems](https://github.com/datalad/datalad-ebrains/workflows/crippled-filesystems/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Acrippled-filesystems)
+[![docs](https://github.com/datalad/datalad-ebrains/workflows/docs/badge.svg)](https://github.com/datalad/datalad-ebrains/actions?query=workflow%3Adocs)
+[![Documentation Status](https://readthedocs.org/projects/datalad-ebrains/badge/?version=latest)](http://docs.datalad.org/projects/ebrains/en/latest/?badge=latest)
 
 EBRAINS is a digital research infrastructure, created by the EU-funded Human
 Brain Project, that gathers an extensive range of data and tools for brain
