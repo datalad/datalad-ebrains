@@ -30,8 +30,12 @@ lgr = logging.getLogger('datalad.ext.ebrains.fairgraph_query')
 
 class FairGraphQuery:
     def __init__(self):
-        # picks up token from KG_AUTH_TOKEN
-        self.client = KGClient()
+        # picks up token from KG_AUTH_TOKEN ;
+        # make sure to specify the url of the production server
+        # (KGClient uses the pre-production server by default,
+        # which can cause unexpected downtime, see
+        # https://github.com/datalad/datalad-ebrains/issues/58)
+        self.client = KGClient(host="core.kg.ebrains.eu")
 
     def bootstrap(self, from_id: str, dl_ds: Dataset, depth=None):
         kg_ds_uuid, kg_ds_versions = self.get_dataset_versions_from_id(
