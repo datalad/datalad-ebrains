@@ -186,9 +186,14 @@ class FairGraphQuery:
         # EBRAINS uses different file repositories that need slightly
         # different handling
         dvr_url_p = urlparse(dvr.iri.value)
+        # public data-proxy datasets
         if dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
                 and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
-            get_fname = _get_fname_dataproxy_v1_bucket
+            get_fname = _get_fname_dataproxy_v1_bucket_public
+        # private data-proxy datasets (e.g. human data gateway)
+        elif dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
+                and dvr_url_p.path.startswith('/api/v1/buckets/'):
+            get_fname = _get_fname_dataproxy_v1_bucket_private
         elif dvr_url_p.netloc == 'object.cscs.ch' \
                 and dvr_url_p.query.startswith('prefix='):
             # get the repos base url by removing the query string
@@ -281,13 +286,22 @@ class FairGraphQuery:
         }
 
 
-def _get_fname_dataproxy_v1_bucket(f):
+def _get_fname_dataproxy_v1_bucket_public(f):
     f_url_p = urlparse(f.iri.value)
     assert f_url_p.netloc == 'data-proxy.ebrains.eu'
     assert f_url_p.path.startswith('/api/v1/public/buckets/')
     path = PurePosixPath(f_url_p.path)
     # take everything past the bucket_id and turn into a Platform native path
     return Path(*path.parts[6:])
+
+
+def _get_fname_dataproxy_v1_bucket_private(f):
+    f_url_p = urlparse(f.iri.value)
+    assert f_url_p.netloc == 'data-proxy.ebrains.eu'
+    assert f_url_p.path.startswith('/api/v1/buckets/')
+    path = PurePosixPath(f_url_p.path)
+    # take everything past the bucket_id and turn into a Platform native path
+    return Path(*path.parts[5:])
 
 
 def _get_fname_cscs_repo(baseurl, prefix, f):
