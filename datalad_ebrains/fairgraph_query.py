@@ -6,6 +6,7 @@ from pathlib import (
     Path,
     PurePosixPath,
 )
+import requests
 from unittest.mock import patch
 from urllib.parse import (
     quote,
@@ -233,7 +234,33 @@ class FairGraphQuery:
 
     def iter_files_dp(self, dvr, get_fname, chunk_size=10000):
         """Yield file records from a data proxy query"""
-        yield from self.iter_files_kg(dvr, get_fname, chunk_size=chunk_size)
+        bucket_url = f'https://data-proxy.ebrains.eu/api/v1/{dvr.name}'
+        response = requests.get(
+            # TODO handle properly
+            f'{bucket_url}?limit=10000',
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f'Bearer {os.environ["KG_AUTH_TOKEN"]}',
+            },
+        )
+        response.raise_for_status()
+        for f in response.json()['objects']:
+            # f is a dict like:
+            # {'hash': '16e1594b23e670086383ff7e7151d81a',
+            #  'last_modified': '2023-02-06T15:06:59.748510',
+            #  'bytes': 194037,
+            #  'name': 'EBRAINS-DataDescriptor_JBA-v3.0.1.pdf',
+            #  'content_type': 'application/pdf'}
+            #
+            # we need
+            # (url: str, name: str, md5sum: str, size: int)
+            yield dict(
+                url=f'{bucket_url}/{f["name"]}',
+                name=f['name'],
+                md5sum=f['hash'],
+                size=f['bytes'],
+            )
+        #yield from self.iter_files_kg(dvr, get_fname, chunk_size=chunk_size)
 
     # the chunk size is large, because the per-request latency costs
     # are enourmous
