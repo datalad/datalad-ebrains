@@ -189,11 +189,17 @@ class FairGraphQuery:
         # public data-proxy datasets
         if dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
                 and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
-            get_fname = _get_fname_dataproxy_v1_bucket_public
+            iter_files = partial(
+                self.iter_files_dp,
+                get_fname=_get_fname_dataproxy_v1_bucket_public,
+            )
         # private data-proxy datasets (e.g. human data gateway)
         elif dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
                 and dvr_url_p.path.startswith('/api/v1/buckets/'):
-            get_fname = _get_fname_dataproxy_v1_bucket_private
+            iter_files = partial(
+                self.iter_files_dp,
+                get_fname=_get_fname_dataproxy_v1_bucket_private,
+            )
         elif dvr_url_p.netloc == 'object.cscs.ch' \
                 and dvr_url_p.query.startswith('prefix='):
             # get the repos base url by removing the query string
@@ -213,28 +219,27 @@ class FairGraphQuery:
                 # filerepo prefix
                 dvr_prefix,
             )
+            iter_files = partial(
+                self.iter_files_kg,
+                get_fname=get_fname,
+            )
         else:
             raise NotImplementedError(
                 f'Unrecognized file repository pointer {dvr.iri.value}')
 
-        for f in self.iter_files(dvr):
-            # we presently cannot understand non-md5 hashes
-            assert f.hash.algorithm.lower() == 'md5'
+        # must yield dict with keys
+        # (url: str, name: str, md5sum: str, size: int)
+        yield from iter_files(dvr)
 
-            f_url = _file_iri_to_url(f.iri.value)
-            fname = get_fname(f)
-            yield dict(
-                url=f_url,
-                name=str(fname),
-                md5sum=f.hash.digest,
-                # assumed to be in bytes
-                size=f.storage_size.value,
-            )
+    def iter_files_dp(self, dvr, get_fname, chunk_size=10000):
+        """Yield file records from a data proxy query"""
+        yield from self.iter_files_kg(dvr, get_fname, chunk_size=chunk_size)
 
     # the chunk size is large, because the per-request latency costs
     # are enourmous
     # https://github.com/HumanBrainProject/fairgraph/issues/57
-    def iter_files(self, dvr, chunk_size=10000):
+    def iter_files_kg(self, dvr, get_fname, chunk_size=10000):
+        """Yield file records from a KG query"""
         cur_index = 0
         while True:
             batch = omcore.File.list(
@@ -242,7 +247,19 @@ class FairGraphQuery:
                 file_repository=dvr,
                 size=chunk_size,
                 from_index=cur_index)
-            yield from batch
+            for f in batch:
+                # we presently cannot understand non-md5 hashes
+                assert f.hash.algorithm.lower() == 'md5'
+
+                f_url = _file_iri_to_url(f.iri.value)
+                fname = get_fname(f)
+                yield dict(
+                    url=f_url,
+                    name=str(fname),
+                    md5sum=f.hash.digest,
+                    # assumed to be in bytes
+                    size=f.storage_size.value,
+                )
             if len(batch) < chunk_size:
                 # there is no point in asking for another batch
                 return
