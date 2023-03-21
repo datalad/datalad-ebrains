@@ -1,9 +1,15 @@
+import os
 import pytest
 from unittest.mock import patch
 
 
 @pytest.fixture(scope="session", autouse=True)
 def authenticate():
+    if 'KG_AUTH_TOKEN' in os.environ:
+        # we seem to have what we need
+        yield
+        return
+
     from datalad.api import ebrains_authenticate
     token = ebrains_authenticate(
         result_renderer='disabled',
