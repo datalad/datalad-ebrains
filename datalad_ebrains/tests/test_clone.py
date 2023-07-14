@@ -89,7 +89,7 @@ def test_clone_invalid_call(tmp_path):
     # make sure the parameter validation is working
     from datalad.api import ebrains_clone
     # always needs a `source`
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         ebrains_clone()
     # must contain a UUID
     with pytest.raises(ValueError):
