@@ -6,6 +6,7 @@ from pathlib import (
     Path,
     PurePosixPath,
 )
+import requests
 from unittest.mock import patch
 from urllib.parse import (
     quote,
@@ -186,9 +187,24 @@ class FairGraphQuery:
         # EBRAINS uses different file repositories that need slightly
         # different handling
         dvr_url_p = urlparse(dvr.iri.value)
+        # public data-proxy datasets
         if dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
                 and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
-            get_fname = _get_fname_dataproxy_v1_bucket
+            iter_files = partial(
+                self.iter_files_dp,
+                dsid=kg_dsver.uuid,
+                auth=False,
+                get_fname=_get_fname_dataproxy_v1_bucket_public,
+            )
+        # private data-proxy datasets (e.g. human data gateway)
+        elif dvr_url_p.netloc == 'data-proxy.ebrains.eu' \
+                and dvr_url_p.path.startswith('/api/v1/buckets/'):
+            iter_files = partial(
+                self.iter_files_dp,
+                dsid=kg_dsver.uuid,
+                auth=True,
+                get_fname=_get_fname_dataproxy_v1_bucket_private,
+            )
         elif dvr_url_p.netloc == 'object.cscs.ch' \
                 and dvr_url_p.query.startswith('prefix='):
             # get the repos base url by removing the query string
@@ -208,28 +224,54 @@ class FairGraphQuery:
                 # filerepo prefix
                 dvr_prefix,
             )
+            iter_files = partial(
+                self.iter_files_kg,
+                get_fname=get_fname,
+            )
         else:
             raise NotImplementedError(
                 f'Unrecognized file repository pointer {dvr.iri.value}')
 
-        for f in self.iter_files(dvr):
-            # we presently cannot understand non-md5 hashes
-            assert f.hash.algorithm.lower() == 'md5'
+        # must yield dict with keys
+        # (url: str, name: str, md5sum: str, size: int)
+        yield from iter_files(dvr)
 
-            f_url = _file_iri_to_url(f.iri.value)
-            fname = get_fname(f)
+    def iter_files_dp(self, dvr, dsid, auth, get_fname, chunk_size=10000):
+        """Yield file records from a data proxy query"""
+        dsurl = f'https://data-proxy.ebrains.eu/api/v1/datasets/{dsid}'
+        response = requests.get(
+            # TODO handle properly
+            f'{dsurl}?limit=10000',
+            # data proxy API will 400 if auth is sent for public resources
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f'Bearer {os.environ["KG_AUTH_TOKEN"]}',
+            } if auth else {},
+        )
+        response.raise_for_status()
+        for f in response.json()['objects']:
+            # f is a dict like:
+            # {'hash': '16e1594b23e670086383ff7e7151d81a',
+            #  'last_modified': '2023-02-06T15:06:59.748510',
+            #  'bytes': 194037,
+            #  'name': 'EBRAINS-DataDescriptor_JBA-v3.0.1.pdf',
+            #  'content_type': 'application/pdf'}
+            #
+            # we need
+            # (url: str, name: str, md5sum: str, size: int)
             yield dict(
-                url=f_url,
-                name=str(fname),
-                md5sum=f.hash.digest,
-                # assumed to be in bytes
-                size=f.storage_size.value,
+                url=f'{dsurl}/{f["name"]}',
+                name=f['name'],
+                md5sum=f['hash'],
+                size=f['bytes'],
             )
+        #yield from self.iter_files_kg(dvr, get_fname, chunk_size=chunk_size)
 
     # the chunk size is large, because the per-request latency costs
     # are enourmous
     # https://github.com/HumanBrainProject/fairgraph/issues/57
-    def iter_files(self, dvr, chunk_size=10000):
+    def iter_files_kg(self, dvr, get_fname, chunk_size=10000):
+        """Yield file records from a KG query"""
         cur_index = 0
         while True:
             batch = omcore.File.list(
@@ -237,7 +279,19 @@ class FairGraphQuery:
                 file_repository=dvr,
                 size=chunk_size,
                 from_index=cur_index)
-            yield from batch
+            for f in batch:
+                # we presently cannot understand non-md5 hashes
+                assert f.hash.algorithm.lower() == 'md5'
+
+                f_url = _file_iri_to_url(f.iri.value)
+                fname = get_fname(f)
+                yield dict(
+                    url=f_url,
+                    name=str(fname),
+                    md5sum=f.hash.digest,
+                    # assumed to be in bytes
+                    size=f.storage_size.value,
+                )
             if len(batch) < chunk_size:
                 # there is no point in asking for another batch
                 return
@@ -281,13 +335,22 @@ class FairGraphQuery:
         }
 
 
-def _get_fname_dataproxy_v1_bucket(f):
+def _get_fname_dataproxy_v1_bucket_public(f):
     f_url_p = urlparse(f.iri.value)
     assert f_url_p.netloc == 'data-proxy.ebrains.eu'
     assert f_url_p.path.startswith('/api/v1/public/buckets/')
     path = PurePosixPath(f_url_p.path)
     # take everything past the bucket_id and turn into a Platform native path
     return Path(*path.parts[6:])
+
+
+def _get_fname_dataproxy_v1_bucket_private(f):
+    f_url_p = urlparse(f.iri.value)
+    assert f_url_p.netloc == 'data-proxy.ebrains.eu'
+    assert f_url_p.path.startswith('/api/v1/buckets/')
+    path = PurePosixPath(f_url_p.path)
+    # take everything past the bucket_id and turn into a Platform native path
+    return Path(*path.parts[5:])
 
 
 def _get_fname_cscs_repo(baseurl, prefix, f):
