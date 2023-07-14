@@ -192,6 +192,7 @@ class FairGraphQuery:
                 and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
             iter_files = partial(
                 self.iter_files_dp,
+                auth=False,
                 get_fname=_get_fname_dataproxy_v1_bucket_public,
             )
         # private data-proxy datasets (e.g. human data gateway)
@@ -199,6 +200,7 @@ class FairGraphQuery:
                 and dvr_url_p.path.startswith('/api/v1/buckets/'):
             iter_files = partial(
                 self.iter_files_dp,
+                auth=True,
                 get_fname=_get_fname_dataproxy_v1_bucket_private,
             )
         elif dvr_url_p.netloc == 'object.cscs.ch' \
@@ -232,16 +234,17 @@ class FairGraphQuery:
         # (url: str, name: str, md5sum: str, size: int)
         yield from iter_files(dvr)
 
-    def iter_files_dp(self, dvr, get_fname, chunk_size=10000):
+    def iter_files_dp(self, dvr, auth, get_fname, chunk_size=10000):
         """Yield file records from a data proxy query"""
         bucket_url = f'https://data-proxy.ebrains.eu/api/v1/{dvr.name}'
         response = requests.get(
             # TODO handle properly
             f'{bucket_url}?limit=10000',
+            # data proxy API will 400 if auth is sent for public resources
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f'Bearer {os.environ["KG_AUTH_TOKEN"]}',
-            },
+            } if auth else {},
         )
         response.raise_for_status()
         for f in response.json()['objects']:
