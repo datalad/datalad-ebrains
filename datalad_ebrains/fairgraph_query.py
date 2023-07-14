@@ -192,6 +192,7 @@ class FairGraphQuery:
                 and dvr_url_p.path.startswith('/api/v1/public/buckets/'):
             iter_files = partial(
                 self.iter_files_dp,
+                dsid=kg_dsver.uuid,
                 auth=False,
                 get_fname=_get_fname_dataproxy_v1_bucket_public,
             )
@@ -200,6 +201,7 @@ class FairGraphQuery:
                 and dvr_url_p.path.startswith('/api/v1/buckets/'):
             iter_files = partial(
                 self.iter_files_dp,
+                dsid=kg_dsver.uuid,
                 auth=True,
                 get_fname=_get_fname_dataproxy_v1_bucket_private,
             )
@@ -234,12 +236,12 @@ class FairGraphQuery:
         # (url: str, name: str, md5sum: str, size: int)
         yield from iter_files(dvr)
 
-    def iter_files_dp(self, dvr, auth, get_fname, chunk_size=10000):
+    def iter_files_dp(self, dvr, dsid, auth, get_fname, chunk_size=10000):
         """Yield file records from a data proxy query"""
-        bucket_url = f'https://data-proxy.ebrains.eu/api/v1/{dvr.name}'
+        dsurl = f'https://data-proxy.ebrains.eu/api/v1/datasets/{dsid}'
         response = requests.get(
             # TODO handle properly
-            f'{bucket_url}?limit=10000',
+            f'{dsurl}?limit=10000',
             # data proxy API will 400 if auth is sent for public resources
             headers={
                 "Content-Type": "application/json",
@@ -258,7 +260,7 @@ class FairGraphQuery:
             # we need
             # (url: str, name: str, md5sum: str, size: int)
             yield dict(
-                url=f'{bucket_url}/{f["name"]}',
+                url=f'{dsurl}/{f["name"]}',
                 name=f['name'],
                 md5sum=f['hash'],
                 size=f['bytes'],
